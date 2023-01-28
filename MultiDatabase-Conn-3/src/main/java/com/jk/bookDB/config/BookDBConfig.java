@@ -1,0 +1,57 @@
+package com.jk.bookDB.config;
+
+import java.util.HashMap;
+import java.util.Map;
+
+import javax.sql.DataSource;
+
+import org.mybatis.spring.annotation.MapperScan;
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.boot.context.properties.ConfigurationProperties;
+import org.springframework.boot.jdbc.DataSourceBuilder;
+import org.springframework.boot.orm.jpa.EntityManagerFactoryBuilder;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
+import org.springframework.orm.jpa.JpaTransactionManager;
+import org.springframework.orm.jpa.LocalContainerEntityManagerFactoryBean;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.annotation.EnableTransactionManagement;
+
+import jakarta.persistence.EntityManagerFactory;
+
+@Configuration
+@EnableTransactionManagement
+@EnableJpaRepositories(
+		entityManagerFactoryRef="bookEntityManagerFactory",
+         //basePackages= {"com.jk.book.mapper"},
+		 basePackages= {"com.jk.repo.book"},
+         transactionManagerRef="bookTransactionManager"
+		)
+@MapperScan("com.jk.book.mapper")
+public class BookDBConfig {
+    
+	@Bean(name="bookDatasource")
+	@ConfigurationProperties(prefix="spring.book.datasource")
+	public DataSource datasource() {
+		 return DataSourceBuilder.create().build();
+	}
+	
+	@Bean(name="bookEntityManagerFactory")
+	public LocalContainerEntityManagerFactoryBean entityManagerFactoryBean(EntityManagerFactoryBuilder builder,
+			@Qualifier("bookDatasource")DataSource datasource) {
+		Map<String,Object> properties = new HashMap<>();
+		 properties.put("hibernate.hbm2ddl.auto", "update");
+		 properties.put("hibernate.dialect", "org.hibernate.dialect.MySQL8Dialect");
+		 
+		 return builder.dataSource(datasource).properties(properties)
+				 .packages("com.jk.model.book").persistenceUnit("Book").build();
+	}
+	
+
+	@Bean(name="bookTransactionManager")
+	public PlatformTransactionManager transactionManager(@Qualifier("bookEntityManagerFactory")EntityManagerFactory entityManagerFactory) {
+		
+		return new JpaTransactionManager(entityManagerFactory);
+	}
+}
